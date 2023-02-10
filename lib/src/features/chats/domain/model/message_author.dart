@@ -1,0 +1,4 @@
+enum MessageAuthor {
+  me,
+  ai,
+}
