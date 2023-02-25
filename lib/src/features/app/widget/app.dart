@@ -14,6 +14,7 @@ import 'package:gpt_chatty/src/features/auth/domain/repo/token_repo.dart';
 import 'package:gpt_chatty/src/features/auth/domain/repo/token_repo_impl.dart';
 import 'package:gpt_chatty/src/features/chats/data/datasource/chats_dao.dart';
 import 'package:gpt_chatty/src/features/chats/data/datasource/openai_api_client.dart';
+import 'package:gpt_chatty/src/features/chats/data/datasource/openai_sse_api_client.dart';
 import 'package:gpt_chatty/src/features/chats/domain/repo/chats_repo.dart';
 import 'package:gpt_chatty/src/features/chats/domain/repo/chats_repo_impl.dart';
 
@@ -51,6 +52,27 @@ class _AppState extends State<App> {
                     error: true,
                   )
                 ]),
+            ),
+            OpenAISSEApiClient(
+              Dio()
+                ..interceptors.addAll(
+                  [
+                    AuthInterceptor(
+                      getToken: () async =>
+                          await RepositoryProvider.of<TokenRepo>(context)
+                              .getApiToken() ??
+                          '',
+                    ),
+                    LogInterceptor(
+                      request: true,
+                      requestBody: true,
+                      requestHeader: true,
+                      responseHeader: true,
+                      responseBody: false,
+                      error: true,
+                    )
+                  ],
+                ),
             ),
             ChatsDao(connect()),
           ),

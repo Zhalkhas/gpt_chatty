@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:gpt_chatty/src/features/chats/data/datasource/chats_dao.dart';
 import 'package:gpt_chatty/src/features/chats/data/datasource/openai_api_client.dart';
+import 'package:gpt_chatty/src/features/chats/data/datasource/openai_sse_api_client.dart';
 import 'package:gpt_chatty/src/features/chats/data/dto/completion_request.dart';
 import 'package:gpt_chatty/src/features/chats/domain/model/chat.dart';
 import 'package:gpt_chatty/src/features/chats/domain/model/message.dart';
@@ -9,9 +10,14 @@ import 'package:gpt_chatty/src/features/chats/domain/repo/chats_repo.dart';
 
 class ChatsRepoImpl implements ChatsRepo {
   final OpenAIApiClient openAIApiClient;
+  final OpenAISSEApiClient openAISSEApiClient;
   final ChatsDao chatsDao;
 
-  const ChatsRepoImpl(this.openAIApiClient, this.chatsDao);
+  const ChatsRepoImpl(
+    this.openAIApiClient,
+    this.openAISSEApiClient,
+    this.chatsDao,
+  );
 
   @override
   Stream<List<Message>> getChatMessages(int chatID) => chatsDao
@@ -32,21 +38,28 @@ class ChatsRepoImpl implements ChatsRepo {
     final prompt =
         '${prevMessages.map((msg) => '${msg.author.name}: ${msg.body}').join('\n')}'
         '\nAI:';
-    print('prompt: $prompt');
-    final response = await openAIApiClient.complete(
+    final respStream = openAISSEApiClient.complete(
       CompletionRequest(
         model: 'text-davinci-003',
         prompt: prompt,
         maxTokens: 2048,
       ),
     );
-    final aiText = (response.choices
-          ..sort((a, b) => a.index.compareTo(b.index)))
-        .firstOrNull
-        ?.text
-        .trim();
-    if (aiText != null) {
-      chatsDao.addMessage(chatID, aiText, MessageAuthor.ai);
+
+    int? messageID;
+    await for (var response in respStream) {
+      final aiText = (response.choices
+            ..sort((a, b) => a.index.compareTo(b.index)))
+          .firstOrNull
+          ?.text;
+      if (aiText != null) {
+        messageID = await chatsDao.upsertMessage(
+          messageID,
+          chatID,
+          messageID == null ? aiText.trim() : aiText,
+          MessageAuthor.ai,
+        );
+      }
     }
   }
 

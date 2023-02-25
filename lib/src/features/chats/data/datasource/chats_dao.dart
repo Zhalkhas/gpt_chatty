@@ -49,6 +49,30 @@ class ChatsDao extends DatabaseAccessor<AppDB> with _$ChatsDaoMixin {
     await messagesTable.insertOne(message);
   }
 
+  Future<int> upsertMessage(
+      int? messageID, int chatID, String text, MessageAuthor author) async {
+    if (messageID == null) {
+      final message = MessagesTableCompanion.insert(
+        body: text,
+        author: author,
+        chatId: chatID,
+      );
+      return messagesTable.insertOne(message);
+    }
+    final prevMessage = await (select(messagesTable)
+          ..where(
+            (tbl) => tbl.id.equals(messageID),
+          ))
+        .getSingle();
+    final message = MessagesTableCompanion.insert(
+      id: Value(messageID),
+      body: prevMessage.body + text,
+      author: author,
+      chatId: chatID,
+    );
+    return messagesTable.insertOnConflictUpdate(message);
+  }
+
   Stream<List<ChatsTableData>> watchChats() => (select(chatsTable)
         ..orderBy(
           [
