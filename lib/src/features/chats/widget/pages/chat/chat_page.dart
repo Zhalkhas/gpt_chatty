@@ -44,21 +44,23 @@ class _ChatPageState extends State<ChatPage> {
             child: Column(
               children: [
                 Expanded(
-                  child: ListView.separated(
-                    separatorBuilder: (context, index) => const Divider(),
-                    reverse: true,
-                    itemBuilder: (context, index) {
-                      final message = messages[index];
-                      return ListTile(
-                        leading: Icon(
-                          message.messageAuthor == MessageAuthor.me
-                              ? Icons.person
-                              : Icons.computer,
-                        ),
-                        title: Text(message.text),
-                      );
-                    },
-                    itemCount: messages.length,
+                  child: SelectionArea(
+                    child: ListView.separated(
+                      separatorBuilder: (context, index) => const Divider(),
+                      reverse: true,
+                      itemBuilder: (context, index) {
+                        final message = messages[index];
+                        return ListTile(
+                          leading: Icon(
+                            message.messageAuthor == MessageAuthor.me
+                                ? Icons.person
+                                : Icons.computer,
+                          ),
+                          title: Text(message.text),
+                        );
+                      },
+                      itemCount: messages.length,
+                    ),
                   ),
                 ),
                 const Divider(),
